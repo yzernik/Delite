@@ -22,7 +22,11 @@ final class FileStreamImpl(charset: Charset, paths: String*) {
 
   private[this] final val jfiles = paths flatMap { path =>
     val jPath = new File(path)
-    if (jPath.isDirectory) jPath.listFiles
+    if (jPath.isDirectory) {
+      val files = jPath.listFiles
+      scala.util.Sorting.quickSort(files)
+      files
+    }
     else if (jPath.isFile) Array(jPath)
     else throw new IllegalArgumentException("Path " + path + " does not appear to be a valid file or directory")
   }

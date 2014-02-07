@@ -774,7 +774,14 @@ trait DeliteOpsExp extends BaseFatExp with EffectExp with VariablesExp with Loop
 
     final lazy val i: Sym[Int] = copyOrElse(_.i)(fresh[Int])
     lazy val body: Def[Unit] = copyBodyOrElse(DeliteForeachElem(
-      func = reifyEffects(this.func(dc_apply(in,v)))
+      // using "here" effects retains dependencies that are lost when fattening an effectful loop in Loops.scala
+      // the outer Reflect(..) wrapper is effectively discarded w.r.t. syms, and forwarded to the inner body
+      //
+      // NOTE: with sequential semantics, using 'here' can introduce problems -- write x; loop { read x, write x }
+      // could short-circuit the inner read to the outer write. however, read/write within a single iteration doesn't
+      // make much sense in parallel anyways.
+      func = reifyEffectsHere(this.func(dc_apply(in,v)))
+      //func = reifyEffects(this.func(dc_apply(in,v)))
       //sync = reifyEffects(this.sync(i))
     ))
   }

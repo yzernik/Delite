@@ -1478,6 +1478,11 @@ trait BaseDeliteOpsTraversalFat extends BaseLoopsTraversalFat {
     case _ => super.applyAddCondition(e,c)
   }
 
+  override def canApplyAddCondition(e: Def[Any]): Boolean = e match {
+    case e: DeliteForeachElem[_] => false
+    case _ => super.canApplyAddCondition(e)
+  }
+
   override def shouldApplyFusion(currentScope: List[Stm])(result: List[Exp[Any]]) = Config.opfusionEnabled
 }
 

@@ -11,7 +11,7 @@ object CppCompile extends CCompile {
   override def ext = "cpp"
 
   protected def configFile = "CPP.xml"
-  protected def compileFlags = Array("-w", "-O3", "-shared", "-fPIC")
+  protected def compileFlags = Array("-w", "-O3", "-shared", "-fPIC", "-std=c++11")
   protected def outputSwitch = "-o"
   
   private val dsFiles = Directory(Path(sourceCacheHome + "datastructures")).files.toList

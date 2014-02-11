@@ -11,6 +11,7 @@ template <class T>
 class cppDeliteArrayNuma {
 public:
     T **wrapper;
+    T *avg;
     int length;
     int numGhostCells; // constant for all internal arrays
 
@@ -18,6 +19,7 @@ public:
     cppDeliteArrayNuma(int _length, int _numGhostCells) {
         length = _length;
         numGhostCells = _numGhostCells;
+	avg = (T *)malloc(numGhostCells*sizeof(T));
         wrapper = (T **)malloc(config->numSockets*sizeof(T*));
     }
 
@@ -47,6 +49,7 @@ public:
     // NUMA-specific functionality
     void allocInternal(int tid) {
       // TODO: this ghostCell stuff is half-baked right now
+      //printf("allocating array for socket %d\n", config->threadToSocket(tid));
       wrapper[config->threadToSocket(tid)] = (T*)malloc(internalLength()*sizeof(T));
       memset(wrapper[config->threadToSocket(tid)], 0, internalLength()*sizeof(T));
     }
@@ -61,33 +64,26 @@ public:
 
     void combineAverage() {
       // calls to this should only be generated on type T <: Numeric, as checked inside the Delite compiler
-      T* avg = (T*)malloc(numGhostCells*sizeof(T));
       memset(avg, 0, numGhostCells*sizeof(T));
       int start = internalLength() - numGhostCells;
-      for (int t = 0; t < config->numThreads; t++) {
-        if (t % config->threadsPerSocket() == 0) {
-          int s = config->threadToSocket(t);
-          // currently only ghosting "to the right"
-          for (int i = start; i < numGhostCells+start; i++) {
-            avg[i-start] += wrapper[s][i];
-          }
+      int numActiveSockets = ceil((float)config->numThreads / (float)config->threadsPerSocket());
+      //printf("start: %d, numGhostCells: %d, internalLnehgt: %d, numActiveSockets: %d\n", start, numGhostCells, internalLength(), numActiveSockets);
+      for (int s = 0; s < numActiveSockets; s++) {
+        // currently only ghosting "to the right"
+	for (int i = start; i < numGhostCells+start; i++) {
+          avg[i-start] += wrapper[s][i];
         }
       }
 
       for (int i = 0; i < numGhostCells; i++) {
-        avg[i] = avg[i] / (ceil((float)config->numThreads / (float)config->threadsPerSocket()));
+        avg[i] = avg[i] / numActiveSockets;
       }
 
-      for (int t = 0; t < config->numThreads; t++) {
-        if (t % config->threadsPerSocket() == 0) {
-          int s = config->threadToSocket(t);
-          for (int i = start; i < numGhostCells+start; i++) {
-            wrapper[s][i] = avg[i-start];
-          }
-        }
+      for (int s = 0; s < numActiveSockets; s++) {
+	for (int i = start; i < numGhostCells+start; i++) {
+	  wrapper[s][i] = avg[i-start];
+	}        
       }
-
-      free(avg);
     }
 
     // --

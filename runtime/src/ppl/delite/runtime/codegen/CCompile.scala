@@ -11,6 +11,7 @@ trait CCompile extends CodeCache {
   
   protected class CompilerConfig(
     val compiler: String, 
+    val make: String,
     val headerDir: Array[String],
     val sourceHeader: Array[String],
     val libs: Array[String],
@@ -49,13 +50,14 @@ trait CCompile extends CodeCache {
 
     val body = XML.loadFile(configFile.jfile)
     val compiler = (body \\ "compiler").text.trim
+    val make = (body \\ "make").text.trim
     val headerPrefix = (body \\ "headers" \ "prefix").text.trim
     val headerDir = body \\ "headers" flatMap { e => val prefix = e \ "prefix"; e \\ "path" map { prefix.text.trim + _.text.trim } } toArray
     val sourceHeader = body \\ "headers" flatMap { e => e \\ "include" map { _.text.trim } } toArray
     val libPrefix = (body \\ "libs" \ "prefix").text.trim
     val libs = body \\ "libs" flatMap { e => val prefix = e \ "prefix"; (e \\ "path").map(p => prefix.text.trim + p.text.trim) ++ (e \\ "library").map(l => l.text.trim) } toArray
 
-    new CompilerConfig(compiler, headerDir, sourceHeader, libs, headerPrefix, libPrefix)
+    new CompilerConfig(compiler, make, headerDir, sourceHeader, libs, headerPrefix, libPrefix)
   }
 
   def compile() {
@@ -63,22 +65,22 @@ trait CCompile extends CodeCache {
     cacheRuntimeSources((sourceBuffer ++ headerBuffer).toArray)
     
     if (modules.exists(_.needsCompile)) {
-      val includes = modules.flatMap(m => List(config.headerPrefix + sourceCacheHome + m.name, config.headerPrefix + Compilers(Targets.getHostTarget(target)).sourceCacheHome + m.name)).toArray
-      val libs = deliteLibs.flatMap(l => Directory(l).files.withFilter(f => f.extension == OS.libExt || f.extension == OS.objExt).map(_.path))
-      val paths = includes ++ config.headerDir ++ Array(config.headerPrefix + Config.deliteHome + sep + "runtime" + sep + target) ++ config.libs ++ libs
+      val includes = modules.flatMap(m => List(config.headerPrefix + sourceCacheHome + m.name, config.headerPrefix + Compilers(Targets.getHostTarget(target)).sourceCacheHome + m.name)).toArray ++ 
+                     config.headerDir ++ Array(config.headerPrefix + Config.deliteHome + sep + "runtime" + sep + target)
+      val libs = config.libs ++ deliteLibs.flatMap(l => Directory(l).files.withFilter(f => f.extension == OS.libExt || f.extension == OS.objExt).map(_.path))
       val sources = (sourceBuffer.map(s => sourceCacheHome + "runtime" + sep + s._2) ++ kernelBuffer.map(k => sourceCacheHome + "kernels" + sep + k) ++ auxSourceList).toArray
       val dest = binCacheHome + target + "Host." + OS.libExt
-      compile(dest, sources, paths)
+      compile(dest, sources, includes, libs)
     }
     sourceBuffer.clear()
     headerBuffer.clear()
     kernelBuffer.clear()
   }
 
-  def compile(destination: String, sources: Array[String], paths: Array[String]) {
+  def compile(destination: String, sources: Array[String], includes: Array[String], libs: Array[String]) {
     Path(destination).parent.createDirectory()
     val output = Array(outputSwitch, destination)
-    val args = Array(config.compiler) ++ compileFlags ++ output ++ sources ++ paths
+    val args = Array(config.compiler) ++ compileFlags ++ output ++ sources ++ includes ++ libs
     println(args.mkString(" "))
     val process = Runtime.getRuntime.exec(args)
     process.waitFor
@@ -88,7 +90,7 @@ trait CCompile extends CodeCache {
   def compileInit(root: String) {
     val source = root + "." + ext
     val dest = root + "." + OS.libExt
-    compile(dest, Array(source), config.headerDir ++ config.libs)
+    compile(dest, Array(source), config.headerDir, config.libs)
   }
 
   protected def checkError(process: Process, args: Array[String]) {

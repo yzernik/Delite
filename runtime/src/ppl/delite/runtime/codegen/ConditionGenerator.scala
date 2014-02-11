@@ -154,12 +154,12 @@ class CppConditionGenerator(val condition: OP_Condition, val location: Int, val 
 
 
   override protected def writeMethodHeader() {
-    out.append("bool " + condition.id.split('_').head + "_cond;\n")
+    out.append("bool " + condition.id.split('_').head + "_cond_" + location + ";\n")
     super.writeMethodHeader()
   }
 
   protected def setConditionVariable(cond: Boolean) {
-    out.append(condition.id.split('_').head + "_cond = " + cond + ";\n")
+    out.append(condition.id.split('_').head + "_cond_" + location + " = " + cond + ";\n")
   }
 
   protected def beginConditionBlock() {

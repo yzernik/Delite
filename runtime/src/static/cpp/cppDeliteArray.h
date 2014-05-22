@@ -3,36 +3,38 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include "DeliteCppMemory.h"
 
 /*
 template <class T>
 class cppDeliteArray {
 public:
-    T *data;
-    int length;
+    T * data;
+    size_t length;
 
     // Constructor
-    cppDeliteArray(int _length) {
+    cppDeliteArray(size_t _length) { //: length(_length), data(new T[_length]) {
         length = _length;
         //TODO: remove initialization to zero
         data = new T[length]();
+        std::cout << "allocating " << _length << ":" << data << std::endl;
     }
 
-    cppDeliteArray(T *_data, int _length) {
+    cppDeliteArray(T *_data, size_t _length) {
         length = _length;
         data = _data;
     }
 
-    T apply(int idx) {
+    inline T apply(int idx) {
         return data[idx];
     }
 
-    void update(int idx, T value) {
+    inline void update(int idx, T value) {
         data[idx] = value;
     }
 
     // DeliteCoolection
-    int size() {
+    inline int size() {
         return length;
     }
 
@@ -96,6 +98,10 @@ public:
       memcpy(result->data, data, sizeof(T) * n);
       return result;
     }
+    
+    //void *operator new(size_t bytes) {
+    //  return DeliteMemoryAlloc(bytes); 
+    //}
 
     void release(void);
 };

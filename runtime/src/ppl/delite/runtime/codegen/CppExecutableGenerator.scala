@@ -46,6 +46,8 @@ trait CppExecutableGenerator extends ExecutableGenerator {
     out.append("env" + location + " = jnienv;\n")
     if (Config.profile)
       out.append("InitDeliteCppTimer(" + Targets.getRelativeLocation(location) + ");\n")
+    if (Config.cppMemMgr == "gc")
+      out.append("DeliteMemoryInit();\n")
 
     val locations = opList.siblings.filterNot(_.isEmpty).map(_.resourceID).toSet
     writeJNIInitializer(locations)

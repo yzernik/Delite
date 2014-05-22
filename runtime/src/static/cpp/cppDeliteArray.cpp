@@ -1,5 +1,6 @@
 /*
 #include "cppDeliteArray.h"
+#include "DeliteCpp.h"
 
 template<> void cppDeliteArray<int>::release(void) { free(data); }
 template<> void cppDeliteArray<float>::release(void) { free(data); }

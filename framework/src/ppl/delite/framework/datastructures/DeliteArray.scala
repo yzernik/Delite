@@ -784,17 +784,21 @@ trait CGenDeliteArrayOps extends BaseGenDeliteArrayOps with CGenDeliteStruct wit
       // NOTE: DSL operations should not rely on the fact that JVM initializes arrays with 0
       if (cppMemMgr == "refcnt")  
         stream.println(remap(sym.tp) + " " + quote(sym) + "(new " + unwrapSharedPtr(remap(sym.tp)) + "(" + quote(n) + "), " + unwrapSharedPtr(remap(sym.tp)) + "D());")
+      else if (cppMemMgr == "gc") // if(isPrimitiveType(m) && remap(m) != "string" && Config.customMem)
+        emitValDef(sym, "new " + remap(sym.tp) + "((" + remap(m) + "*)DeliteMemoryAlloc(sizeof(" + remap(m) + ")*" + quote(n) + ")," + quote(n) + ")")
       else
         emitValDef(sym, "new " + remap(sym.tp) + "(" + quote(n) + ")")
     case DeliteArrayLength(da) =>
       emitValDef(sym, quote(da) + "->length")
     case DeliteArrayApply(da, idx) =>
-      emitValDef(sym, quote(da) + "->apply(" + quote(idx) + ")")
+      emitValDef(sym, "((" + remapWithRef(sym.tp) + "* __restrict)(" + quote(da) + "->data))[" + quote(idx) + "]")
     case DeliteArrayUpdate(da, idx, x) =>
-      stream.println(quote(da) + "->update(" + quote(idx) + ", " + quote(x) + ");")
+      stream.println(remapWithRef(x.tp) + " * __restrict _" + quote(da) + " = " + quote(da) + "->data;")
+      stream.println("_" + quote(da) + "[" + quote(idx) + "] = " + quote(x) + ";")
     case StructUpdate(struct, fields, idx, x) =>
       val nestedApply = if (idx.length > 1) idx.take(idx.length-1).map(i=>"apply("+quote(i)+")").mkString("","->","->") else ""
-      stream.println(quote(struct) + fields.mkString("->","->","->") + nestedApply + "update(" + quote(idx(idx.length-1)) + "," + quote(x) + ");")
+      stream.println(remapWithRef(x.tp) + " * __restrict _" + quote(struct) + " = " + quote(struct) + fields.mkString("->","->","->") + nestedApply + "data;")
+      stream.println("_" + quote(struct) + "[" + quote(idx(idx.length-1)) + "] = " + quote(x) + ";")
     case DeliteArrayCopy(src,srcPos,dest,destPos,len) =>
       stream.println("if((" + quote(src) + "->data==" + quote(dest) + "->data) && (" + quote(srcPos) + "<" + quote(destPos) + "))")
       stream.println("std::copy_backward(" + quote(src) + "->data+" + quote(srcPos) + "," + quote(src) + "->data+" + quote(srcPos) + "+" + quote(len) + "," + quote(dest) + "->data+" + quote(destPos) + "+" + quote(len) + ");")

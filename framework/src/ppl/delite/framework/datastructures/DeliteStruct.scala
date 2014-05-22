@@ -701,6 +701,9 @@ struct __T__D {
       
       if(isAcceleratorTarget)
         stream.println("#include \"" + hostTarget + name + ".h\"")
+	
+      if(cppMemMgr == "gc")
+        stream.println("#include \"DeliteCppMemory.h\"")
 
       stream.println("class " + deviceTarget + name + " {")
       // fields
@@ -731,6 +734,13 @@ struct __T__D {
         stream.println("\tbool equals(" + deviceTarget + name + addRef() + " to) {")
       stream.println("\t\treturn " + elemEquals + ";")
       stream.println("\t}")
+
+      // custom alloc
+      if (cppMemMgr == "gc") {
+        stream.println("\tvoid *operator new(size_t bytes) {")
+        stream.println("\t\treturn DeliteMemoryAlloc(bytes);")
+        stream.println("\t}")
+      }
 
       // free
       //stream.println("\tvoid release(void) {")
